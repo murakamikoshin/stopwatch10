@@ -1,0 +1,9 @@
+{
+  "name": "stopwatch10-scores",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node test.mjs",
+    "deploy": "wrangler deploy"
+  }
+}

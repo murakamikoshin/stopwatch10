@@ -1,0 +1,16 @@
+# ランキングの置き場（Cloudflare Workers + KV）
+#
+#   wrangler kv namespace create SCORES     # 出てきた id を下に貼る
+#   wrangler deploy
+#
+name = "stopwatch10-scores"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+[vars]
+# ここに並べた出どころからだけ書き込みを受ける。空にすると誰からでも受ける
+ALLOWED_ORIGINS = "https://koshinstudio.com,https://www.koshinstudio.com"
+
+[[kv_namespaces]]
+binding = "SCORES"
+id = "PUT_YOUR_KV_NAMESPACE_ID_HERE"

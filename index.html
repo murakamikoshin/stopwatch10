@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>10秒ピッタリで止めろ！ | KoshinStudio</title>
+<meta name="description" content="頭の中で目標の秒数を数えて止めるだけ。10秒3回勝負と100秒一発勝負。誤差の小ささで競うシンプルなブラウザゲーム。">
+<meta property="og:title" content="10秒ピッタリで止めろ！">
+<meta property="og:description" content="3回勝負。1回あたりの誤差が小さいほど強い。">
+<meta property="og:type" content="website">
+<!-- ランキングの置き場。空 or 無しならランキングはまるごと出ない -->
+<meta name="stopwatch10-api" content="">
+<style>
+  :root{
+    --bench:#B4B7A4;
+    --bench-dark:#9DA18D;
+    --case:#2E3A34;
+    --case-hi:#3E4C44;
+    --case-lo:#1B241F;
+    --panel:#0B0F0D;
+    --lit:#FFB03A;
+    --ghost:rgba(255,176,58,.075);
+    --perfect:#FFF0C8;
+    --fast:#79ADC4;
+    --slow:#E0654A;
+    --key:#E9E4D2;
+    --key-lo:#B9B4A2;
+    --ink:#232821;
+  }
+  *{box-sizing:border-box}
+  [hidden]{display:none !important}
+  html,body{margin:0;padding:0}
+  body{
+    min-height:100dvh;
+    background:var(--bench);
+    background-image:repeating-linear-gradient(92deg,rgba(0,0,0,.035) 0 1px,transparent 1px 7px);
+    color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP","Yu Gothic",system-ui,sans-serif;
+    -webkit-text-size-adjust:100%;
+    display:flex;flex-direction:column;align-items:center;
+    padding:16px 14px calc(16px + env(safe-area-inset-bottom));
+    gap:14px;
+  }
+  h1{
+    font-size:17px;font-weight:800;letter-spacing:.14em;
+    margin:2px 0 0;text-align:center;color:#3A4038;
+  }
+  .modes{display:flex;gap:6px;width:100%;max-width:420px}
+  .modes button{
+    flex:1;-webkit-appearance:none;appearance:none;border:0;border-radius:9px;
+    padding:9px 4px;background:rgba(255,255,255,.32);color:#3A4038;
+    font-family:inherit;font-size:13px;font-weight:800;line-height:1.35;
+    letter-spacing:.04em;cursor:pointer;touch-action:manipulation;
+  }
+  .modes button i{display:block;font-style:normal;font-size:10px;font-weight:600;letter-spacing:0;opacity:.72}
+  .modes button[aria-pressed="true"]{background:var(--case);color:#F0EDDF}
+  .modes button:disabled{opacity:.42;cursor:default}
+  .device{
+    width:100%;max-width:420px;
+    background:linear-gradient(178deg,var(--case-hi),var(--case) 22%,var(--case-lo));
+    border-radius:14px;
+    padding:16px 16px 18px;
+    box-shadow:0 2px 0 #7E8272, 0 10px 20px -8px rgba(20,25,20,.6), inset 0 1px 0 rgba(255,255,255,.14);
+  }
+  .lamps{display:flex;gap:9px;align-items:center;margin:0 2px 12px;min-height:11px}
+  .lamp{width:11px;height:11px;border-radius:50%;background:rgba(255,255,255,.09);box-shadow:inset 0 1px 2px rgba(0,0,0,.6)}
+  .lamp.on{background:var(--lit);box-shadow:0 0 9px rgba(255,176,58,.7)}
+  .lamps span{margin-left:auto;font-size:11px;letter-spacing:.1em;color:rgba(255,255,255,.42)}
+  .panel{
+    background:var(--panel);border-radius:8px;
+    padding:16px 12px 12px;
+    box-shadow:inset 0 3px 10px rgba(0,0,0,.85), inset 0 0 0 1px rgba(255,255,255,.05);
+  }
+  .panel svg{display:block;width:100%;height:auto}
+  .seg{fill:var(--ghost)}
+  .seg.on{fill:var(--lit);filter:drop-shadow(0 0 5px rgba(255,176,58,.55))}
+  .perfect .seg.on{fill:var(--perfect);filter:drop-shadow(0 0 10px rgba(255,240,200,.85))}
+  .readout{
+    margin-top:10px;min-height:24px;
+    font-size:15px;font-weight:700;text-align:center;
+    font-variant-numeric:tabular-nums;
+    color:rgba(255,255,255,.5);letter-spacing:.04em;
+  }
+  .readout.fast{color:var(--fast)}
+  .readout.slow{color:var(--slow)}
+  .readout.hit{color:var(--perfect)}
+  .readout.void{color:rgba(255,255,255,.38)}
+  .key{
+    -webkit-appearance:none;appearance:none;
+    width:100%;max-width:420px;
+    border:0;border-radius:12px;
+    background:linear-gradient(180deg,#F5F1E2,var(--key) 45%,#DCD6C2);
+    color:var(--ink);
+    font-family:inherit;font-size:21px;font-weight:800;letter-spacing:.1em;
+    padding:24px 16px;
+    box-shadow:0 6px 0 var(--key-lo), 0 12px 18px -8px rgba(20,25,20,.5);
+    cursor:pointer;touch-action:manipulation;user-select:none;-webkit-user-select:none;
+  }
+  .key:active{transform:translateY(4px);box-shadow:0 2px 0 var(--key-lo)}
+  .key:focus-visible{outline:3px solid #2E3A34;outline-offset:3px}
+  .key.stop{background:linear-gradient(180deg,#EE8266,var(--slow) 45%,#C24F38);color:#fff;box-shadow:0 6px 0 #A8412D, 0 12px 18px -8px rgba(20,25,20,.5)}
+  .key.stop:active{box-shadow:0 2px 0 #A8412D}
+  .hint{font-size:13px;line-height:1.7;text-align:center;color:#4A4F45;max-width:420px;margin:0}
+  .board{
+    width:100%;max-width:420px;
+    background:rgba(255,255,255,.35);
+    border-radius:10px;padding:12px 14px;
+    font-size:13px;line-height:1.9;
+  }
+  .board dl{display:grid;grid-template-columns:auto auto;margin:0;gap:0 12px}
+  .board dt{color:#565C51}
+  .board dd{margin:0;text-align:right;font-weight:800;font-variant-numeric:tabular-nums}
+  .rounds{margin:8px 0 0;padding:8px 0 0;border-top:1px solid rgba(35,40,33,.16);display:flex;gap:10px;justify-content:space-between;font-variant-numeric:tabular-nums;font-size:13px}
+  .rounds b{font-weight:800}
+  .rank{
+    width:100%;max-width:420px;
+    background:rgba(255,255,255,.35);
+    border-radius:10px;padding:12px 14px;
+  }
+  .rank h2{font-size:12px;font-weight:800;letter-spacing:.12em;margin:0 0 9px;color:#3A4038}
+  .rank-tabs{display:flex;gap:5px;margin-bottom:9px;flex-wrap:wrap}
+  .rank-tabs button{
+    -webkit-appearance:none;appearance:none;border:1px solid rgba(35,40,33,.28);
+    background:transparent;color:#3D4239;border-radius:20px;
+    font-family:inherit;font-size:11px;font-weight:700;padding:5px 11px;cursor:pointer;
+  }
+  .rank-tabs button[aria-pressed="true"]{background:var(--case);border-color:var(--case);color:#F0EDDF}
+  .rank ol{list-style:none;margin:0;padding:0;font-size:13px;font-variant-numeric:tabular-nums}
+  .rank li{display:flex;align-items:baseline;gap:9px;padding:4px 5px;border-bottom:1px solid rgba(35,40,33,.1)}
+  .rank li:last-child{border-bottom:0}
+  .rank li .no{width:2.2em;text-align:right;color:#565C51;font-size:12px}
+  .rank li .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rank li .va{font-weight:800}
+  .rank li .sub{font-size:11px;color:#565C51;margin-left:6px;font-weight:400}
+  .rank li.me{background:rgba(255,176,58,.3);border-radius:5px}
+  .rank form{display:flex;gap:8px;margin-top:11px}
+  .rank input{
+    flex:1;min-width:0;font-family:inherit;font-size:16px;padding:9px 10px;
+    border-radius:8px;border:1px solid rgba(35,40,33,.3);
+    background:rgba(255,255,255,.72);color:var(--ink);
+  }
+  .rank form button{
+    -webkit-appearance:none;appearance:none;border:0;border-radius:8px;
+    background:var(--case);color:#F0EDDF;font-family:inherit;font-size:13px;font-weight:800;
+    padding:9px 15px;cursor:pointer;white-space:nowrap;
+  }
+  .rank form button:disabled{opacity:.5;cursor:default}
+  .rank-note{font-size:11px;line-height:1.7;color:#565C51;margin:9px 0 0}
+  .share{
+    -webkit-appearance:none;appearance:none;
+    width:100%;max-width:420px;border:2px solid #4A4F45;background:transparent;color:#333831;
+    font-family:inherit;font-size:14px;font-weight:700;padding:13px;border-radius:9px;cursor:pointer;
+  }
+  .share:active{background:rgba(0,0,0,.06)}
+  footer{font-size:11px;color:#5B604F;letter-spacing:.08em;margin-top:auto;padding-top:8px}
+  footer a{color:inherit}
+  .mute{position:fixed;top:10px;right:12px;background:none;border:0;font-size:18px;cursor:pointer;padding:6px;color:#4A4F45}
+  @media (prefers-reduced-motion:reduce){
+    .key:active{transform:none}
+  }
+</style>
+</head>
+<body>
+
+<button class="mute" id="mute" aria-label="音を切り替える">♪</button>
+
+<h1>10秒ピッタリで止めろ！</h1>
+
+<div class="modes" id="modes" role="group" aria-label="モード"></div>
+
+<div class="device">
+  <div class="lamps">
+    <div class="lampset" id="lampset" style="display:flex;gap:9px"></div>
+    <span id="roundLabel">1回目</span>
+  </div>
+  <div class="panel" id="panel">
+    <svg id="disp" viewBox="0 0 368 112" role="img" aria-hidden="true"></svg>
+  </div>
+  <p class="readout" id="readout" role="status" aria-live="polite">スタートを押して、心の中で10秒</p>
+</div>
+
+<button class="key" id="key">スタート</button>
+
+<p class="hint" id="hint"></p>
+
+<div class="board">
+  <dl>
+    <dt id="avgLabel">1回あたりの誤差</dt><dd id="avg">—</dd>
+    <dt id="oneLabel">ベスト1回</dt><dd id="one">—</dd>
+    <dt id="bestAvgLabel">自己ベスト（平均）</dt><dd id="bestAvg">—</dd>
+    <dt id="bestOneLabel">自己ベスト（1回）</dt><dd id="bestOne">—</dd>
+  </dl>
+  <div class="rounds" id="rounds"></div>
+</div>
+
+<div class="rank" id="rank" hidden>
+  <h2>ランキング</h2>
+  <div class="rank-tabs" id="rankTabs">
+    <button type="button" data-board="avg" aria-pressed="true">1回あたり</button>
+    <button type="button" data-board="one" aria-pressed="false">ベスト1回</button>
+    <span style="flex:1"></span>
+    <button type="button" data-span="daily" aria-pressed="true">今日</button>
+    <button type="button" data-span="all" aria-pressed="false">通算</button>
+  </div>
+  <ol id="rankList"></ol>
+  <form id="rankForm" hidden>
+    <input id="nameInput" type="text" maxlength="12" placeholder="なまえ（12文字まで）" autocomplete="nickname" enterkeyhint="send">
+    <button type="submit" id="rankSend">のせる</button>
+  </form>
+  <p class="rank-note" id="rankNote"></p>
+</div>
+
+<button class="share" id="share" hidden>結果をコピーする</button>
+
+<footer>KoshinStudio</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  /* =========================================================
+     崩してはいけない三つ
+
+     1. 表示は小数3桁まで。performance.now() は端末ごとに精度が違う
+        （Chrome 5µs / Safari・Firefox 1ms）。6桁出すと時計の粗い端末ほど
+        末尾が 000 になって有利になり、ランキングが壊れる。
+     2. 計測は pointerdown の event.timeStamp。click は余計な遅延が乗る。
+        timeStamp は performance.now() と同じ time origin なので直接引ける。
+     3. 計測中は周期的に動くものを一切置かない。1Hz で光る何かがあると
+        それがメトロノーム代わりになって、自力で数えるゲームでなくなる。
+        CSS アニメーションを足すときは、必ず計測中に止まることを確かめる。
+     ========================================================= */
+
+  var HINT_100 = 3000;   // 100秒モードのヒント長。10000 にすれば最初の10秒を表示する
+  var TOP_N    = 20;     // ランキングに出す人数
+
+  /* ランキングの置き場。meta か window で差し替える。空ならランキングは出ない */
+  var API_BASE = "";
+  var apiMeta = document.querySelector('meta[name="stopwatch10-api"]');
+  if (apiMeta && apiMeta.content) API_BASE = apiMeta.content;
+  if (typeof window.STOPWATCH10_API === "string") API_BASE = window.STOPWATCH10_API;
+  if (!window.fetch || !window.Promise) API_BASE = "";
+  API_BASE = API_BASE.replace(/\/+$/, "");
+
+  var MODES = [
+    { id:"s10",  name:"10秒",  sub:"ヒントなし", target:10000,  rounds:3, hintMs:0,        ranked:true,
+      guide:"数えている間、画面はなにも動きません。<br>タイマーも音も出ないので、自力で10秒。" },
+    { id:"s10h", name:"10秒",  sub:"ヒントあり", target:10000,  rounds:3, hintMs:3000,     ranked:false,
+      guide:"最初の3秒だけ時計が出ます。<br>そこで刻みをつかんで、残りは自力で。" },
+    { id:"s100", name:"100秒", sub:"一発勝負",   target:100000, rounds:1, hintMs:HINT_100, ranked:false,
+      guide:"最初の{H}秒だけ時計が出ます。1回きり。<br>途中で画面を離れると無効になります。" }
+  ];
+  var MODE_BY_ID = {};
+  for (var mi=0; mi<MODES.length; mi++){
+    var md = MODES[mi];
+    md.intCount = String(Math.floor(md.target/1000)).length; // 10秒→2桁 / 100秒→3桁
+    MODE_BY_ID[md.id] = md;
+  }
+
+  var SEG_NAMES = ["a","b","c","d","e","f","g"];
+  var SEGMAP = {
+    0:"abcdef", 1:"bc", 2:"abged", 3:"abgcd", 4:"fgbc",
+    5:"afgcd", 6:"afgecd", 7:"abc", 8:"abcdefg", 9:"abcdfg"
+  };
+  var SHAPES = {
+    a:"14,2 48,2 52,7 48,12 14,12 10,7",
+    g:"14,51 48,51 52,56 48,61 14,61 10,56",
+    d:"14,100 48,100 52,105 48,110 14,110 10,105",
+    f:"8,10 13,15 13,48 8,53 3,48 3,15",
+    b:"54,10 59,15 59,48 54,53 49,48 49,15",
+    e:"8,59 13,64 13,97 8,102 3,97 3,64",
+    c:"54,59 59,64 59,97 54,102 49,97 49,64"
+  };
+  var NS = "http://www.w3.org/2000/svg";
+
+  var $ = function(id){ return document.getElementById(id); };
+  var disp = $("disp"), panel = $("panel"), key = $("key"), readout = $("readout"), guideEl = $("hint");
+  var modesEl = $("modes"), lampset = $("lampset"), roundLabel = $("roundLabel"), roundsEl = $("rounds");
+  var avgEl = $("avg"), oneEl = $("one"), bestAvgEl = $("bestAvg"), bestOneEl = $("bestOne");
+  var avgLabel = $("avgLabel"), oneLabel = $("oneLabel"), bestOneLabel = $("bestOneLabel");
+  var shareBtn = $("share"), muteBtn = $("mute");
+  var rankBox = $("rank"), rankTabs = $("rankTabs"), rankList = $("rankList");
+  var rankForm = $("rankForm"), nameInput = $("nameInput"), rankSend = $("rankSend"), rankNote = $("rankNote");
+
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---------------- 表示（7セグ） ---------------- */
+  var digits = [], dot = null, dotOn = false;
+
+  function buildDisplay(intCount){
+    while (disp.firstChild) disp.removeChild(disp.firstChild);
+    digits = []; dotOn = false;
+
+    var slots = [], i;
+    for (i=0;i<intCount;i++) slots.push(i*70);
+    var dotX = intCount*70 + 10;
+    for (i=0;i<3;i++) slots.push(intCount*70 + 26 + i*70);
+    disp.setAttribute("viewBox", "0 0 " + (slots[slots.length-1] + 62) + " 112");
+
+    for (i=0;i<slots.length;i++){
+      var g = document.createElementNS(NS,"g");
+      g.setAttribute("transform","translate("+slots[i]+",0)");
+      var segs = { ch:"none" };
+      for (var s=0;s<SEG_NAMES.length;s++){
+        var p = document.createElementNS(NS,"polygon");
+        p.setAttribute("points", SHAPES[SEG_NAMES[s]]);
+        p.setAttribute("class","seg");
+        g.appendChild(p);
+        segs[SEG_NAMES[s]] = p;
+      }
+      disp.appendChild(g);
+      digits.push(segs);
+    }
+    dot = document.createElementNS(NS,"circle");
+    dot.setAttribute("cx", String(dotX));
+    dot.setAttribute("cy","105");
+    dot.setAttribute("r","7");
+    dot.setAttribute("class","seg");
+    disp.appendChild(dot);
+  }
+
+  function setDigit(idx, ch){
+    var segs = digits[idx];
+    if (!segs || segs.ch === ch) return;   // 同じ数字なら触らない（ヒント表示は毎フレーム来る）
+    segs.ch = ch;
+    var on = (ch === null || ch === undefined) ? "" : SEGMAP[ch];
+    for (var i=0;i<SEG_NAMES.length;i++){
+      segs[SEG_NAMES[i]].classList.toggle("on", on.indexOf(SEG_NAMES[i]) !== -1);
+    }
+  }
+  function setDot(on){
+    on = !!on;
+    if (on === dotOn) return;
+    dotOn = on;
+    dot.classList.toggle("on", on);
+  }
+  function blankAll(){
+    for (var i=0;i<digits.length;i++) setDigit(i, null);
+    setDot(false);
+    panel.classList.remove("perfect");
+  }
+  function capMs(){ return Math.pow(10, mode.intCount)*1000 - 1; }
+
+  function charsOf(ms){
+    var cap = capMs();
+    if (ms > cap) ms = cap;
+    if (ms < 0) ms = 0;
+    var whole = Math.floor(ms/1000), frac = Math.floor(ms) % 1000, out = [], i;
+    for (i=mode.intCount-1;i>=0;i--) out.push(Math.floor(whole/Math.pow(10,i)) % 10);
+    out.push(Math.floor(frac/100), Math.floor(frac/10) % 10, frac % 10);
+    return out;
+  }
+  function showTime(ms){
+    var c = charsOf(ms);
+    for (var i=0;i<c.length;i++) setDigit(i, c[i]);
+    setDot(true);
+  }
+
+  /* ---------------- 状態 ---------------- */
+  var mode = MODES[0];
+  var state = "ready";   // ready | running | revealing | shown | done | void
+  var startTs = 0, round = 0, errors = [], timers = [], rafId = 0;
+  var slotEls = [], lamps = [];
+  var muted = false, submitted = false;
+
+  function clearTimers(){
+    for (var i=0;i<timers.length;i++) clearTimeout(timers[i]);
+    timers = [];
+    if (rafId){ cancelAnimationFrame(rafId); rafId = 0; }
+  }
+
+  /* ---------------- 音（素材なし） ---------------- */
+  var ac = null;
+  function beep(freq, dur, vol){
+    if (muted) return;
+    try {
+      if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+      if (ac.state === "suspended") ac.resume();
+      var o = ac.createOscillator(), g2 = ac.createGain();
+      o.type = "square"; o.frequency.value = freq;
+      g2.gain.setValueAtTime(vol, ac.currentTime);
+      g2.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + dur);
+      o.connect(g2); g2.connect(ac.destination);
+      o.start(); o.stop(ac.currentTime + dur);
+    } catch(e){}
+  }
+
+  /* ---------------- 記録（モードごと） ---------------- */
+  var memRec = {};
+  function recKey(id){ return "stopwatch10.rec." + id; }
+
+  function loadRec(id){
+    var r = null;
+    try {
+      var raw = localStorage.getItem(recKey(id));
+      if (raw) r = JSON.parse(raw);
+    } catch(e){}
+    if (!r) r = memRec[id] || null;
+    if (!r && id === "s10"){
+      /* 旧版（10秒3回・誤差合計だけを持っていた）からの持ち越し */
+      try {
+        var old = localStorage.getItem("pittari10.best");
+        if (old !== null && old !== "" && isFinite(Number(old))) r = { avg:Number(old)/3, best:null, rest:null };
+      } catch(e){}
+    }
+    return r || { avg:null, best:null, rest:null };
+  }
+  function saveRec(id, r){
+    memRec[id] = r;
+    try { localStorage.setItem(recKey(id), JSON.stringify(r)); } catch(e){}
+  }
+  function loadName(){
+    try { return localStorage.getItem("stopwatch10.name") || ""; } catch(e){ return ""; }
+  }
+  function saveName(v){
+    try { localStorage.setItem("stopwatch10.name", v); } catch(e){}
+  }
+
+  function fmtSec(ms){ return (Math.abs(ms)/1000).toFixed(3) + "秒"; }
+  function fmtErr(ms){
+    var s = (Math.abs(ms)/1000).toFixed(3);
+    return (ms > 0 ? "+" : ms < 0 ? "-" : "±") + s;
+  }
+
+  /* ---------------- 画面の組み立て ---------------- */
+  function buildModes(){
+    modesEl.innerHTML = "";
+    for (var i=0;i<MODES.length;i++){
+      (function(m){
+        var b = document.createElement("button");
+        b.type = "button";
+        b.setAttribute("aria-pressed", m.id === mode.id ? "true" : "false");
+        b.appendChild(document.createTextNode(m.name));
+        var em = document.createElement("i");
+        em.textContent = m.sub;
+        b.appendChild(em);
+        b.addEventListener("click", function(){ selectMode(m.id); });
+        modesEl.appendChild(b);
+      })(MODES[i]);
+    }
+  }
+  function paintModes(){
+    var bs = modesEl.children, busy = (state === "running" || state === "revealing");
+    for (var i=0;i<bs.length;i++){
+      bs[i].setAttribute("aria-pressed", MODES[i].id === mode.id ? "true" : "false");
+      bs[i].disabled = busy;
+    }
+  }
+
+  function buildRounds(){
+    var marks = ["①","②","③","④","⑤"];
+    roundsEl.innerHTML = "";
+    lampset.innerHTML = "";
+    slotEls = []; lamps = [];
+    for (var i=0;i<mode.rounds;i++){
+      var lamp = document.createElement("div");
+      lamp.className = "lamp";
+      lampset.appendChild(lamp);
+      lamps.push(lamp);
+    }
+    if (mode.rounds < 2){ roundsEl.hidden = true; return; }
+    roundsEl.hidden = false;
+    for (var j=0;j<mode.rounds;j++){
+      var d = document.createElement("div");
+      d.appendChild(document.createTextNode(marks[j] + " "));
+      var b = document.createElement("b");
+      b.textContent = "—";
+      d.appendChild(b);
+      roundsEl.appendChild(d);
+      slotEls.push(b);
+    }
+  }
+
+  function paintLamps(){
+    for (var i=0;i<lamps.length;i++) lamps[i].classList.toggle("on", i < errors.length);
+    if (mode.rounds < 2){
+      roundLabel.textContent = state === "done" ? "おわり" : state === "void" ? "無効" : "一発勝負";
+    } else {
+      roundLabel.textContent = state === "done" ? "おわり" : state === "void" ? "無効"
+        : (Math.min(round+1, mode.rounds) + "回目");
+    }
+  }
+
+  function paintBoardLabels(){
+    var solo = mode.rounds < 2;
+    avgLabel.textContent = solo ? "誤差" : "1回あたりの誤差";
+    oneLabel.hidden = solo; oneEl.hidden = solo;
+    bestOneLabel.hidden = solo; bestOneEl.hidden = solo;
+    $("bestAvgLabel").textContent = solo ? "自己ベスト" : "自己ベスト（平均）";
+  }
+
+  function paintRecords(){
+    var r = loadRec(mode.id);
+    bestAvgEl.textContent = (r.avg === null || r.avg === undefined) ? "—" : fmtSec(r.avg);
+    bestOneEl.textContent = (r.best === null || r.best === undefined) ? "—" : fmtSec(r.best);
+  }
+
+  function clearBoard(){
+    avgEl.textContent = "—";
+    oneEl.textContent = "—";
+    for (var i=0;i<slotEls.length;i++) slotEls[i].textContent = "—";
+  }
+
+  function setGuide(){
+    guideEl.innerHTML = mode.guide.replace("{H}", String(Math.round(mode.hintMs/1000)));
+  }
+
+  /* ---------------- ヒント（rAF。setTimeout はドリフトする） ---------------- */
+  function hintLoop(){
+    rafId = 0;
+    if (state !== "running") return;
+    var el = performance.now() - startTs;
+    if (el >= mode.hintMs){
+      blankAll();                       // 閾値を越えた瞬間に完全に消灯して、ループを止める
+      readout.textContent = "ここから自力";
+      return;
+    }
+    showTime(el);
+    rafId = requestAnimationFrame(hintLoop);
+  }
+
+  /* ---------------- 結果を出す ---------------- */
+  function reveal(elapsed){
+    var ms = Math.round(elapsed), cap = capMs();
+    if (ms > cap) ms = cap;
+    if (ms < 0) ms = 0;
+    var c = charsOf(ms), err = ms - mode.target, n = mode.intCount;
+
+    blankAll();
+    var steps = [
+      function(){ for (var i=0;i<n;i++) setDigit(i, c[i]); setDot(true); beep(880,.05,.05); },
+      function(){ setDigit(n,   c[n]);   beep(760,.05,.05); },
+      function(){ setDigit(n+1, c[n+1]); beep(660,.05,.05); },
+      function(){ setDigit(n+2, c[n+2]); beep(560,.06,.06); finish(err); }
+    ];
+    if (reduceMotion){
+      for (var i=0;i<steps.length;i++) steps[i]();
+    } else {
+      for (var j=0;j<steps.length;j++){
+        (function(fn,k){ timers.push(setTimeout(fn, 260 + k*300)); })(steps[j], j);
+      }
+    }
+  }
+
+  function finish(err){
+    errors.push(err);
+    if (slotEls[errors.length-1]) slotEls[errors.length-1].textContent = fmtErr(err);
+
+    readout.className = "readout " + (err === 0 ? "hit" : err > 0 ? "slow" : "fast");
+    if (err === 0){
+      panel.classList.add("perfect");
+      readout.textContent = "ジャスト！ 1000分の1を引いた";
+      beep(1320,.5,.09);
+    } else {
+      readout.textContent = fmtErr(err) + "秒 " + (err > 0 ? "遅い" : "早い");
+    }
+
+    if (errors.length >= mode.rounds){
+      state = "done";
+      conclude();
+    } else {
+      state = "shown";
+      key.textContent = "つぎへ";
+    }
+    key.classList.remove("stop");
+    paintLamps();
+    paintModes();
+  }
+
+  function summarize(){
+    var sum = 0, best = Infinity, i, a;
+    for (i=0;i<errors.length;i++){
+      a = Math.abs(errors[i]);
+      sum += a;
+      if (a < best) best = a;
+    }
+    return { sum:sum, avg:sum/errors.length, best:best, rest:sum-best };
+  }
+
+  function conclude(){
+    var s = summarize();
+    avgEl.textContent = fmtSec(s.avg);
+    oneEl.textContent = fmtSec(s.best);
+
+    var r = loadRec(mode.id), got = [];
+    if (r.avg === null || r.avg === undefined || s.avg < r.avg){ r.avg = s.avg; got.push("平均"); }
+    /* ベスト1回のタイブレークは「残り2回の誤差合計」。0.000 が詰まっても順が付く */
+    if (r.best === null || r.best === undefined || s.best < r.best ||
+        (s.best === r.best && s.rest < r.rest)){
+      r.best = s.best; r.rest = s.rest;
+      if (mode.rounds > 1) got.push("ベスト1回");
+    }
+    if (got.length) saveRec(mode.id, r);
+    paintRecords();
+
+    if (got.length) readout.textContent += " ／ 自己ベスト更新";
+
+    key.textContent = "もう一度";
+    guideEl.innerHTML = mode.rounds > 1
+      ? "1回あたりの誤差が小さいほど強い。<br>ベスト1回は、その日の運。"
+      : "1回きり。次はページを開き直してから。";
+    shareBtn.hidden = false;
+    submitted = false;
+    openRankForm();
+  }
+
+  /* ---------------- 入力 ---------------- */
+  function toReady(){
+    clearTimers();
+    blankAll();
+    readout.className = "readout";
+    readout.textContent = mode.hintMs > 0
+      ? "スタートを押すと、最初の" + Math.round(mode.hintMs/1000) + "秒だけ時計が出ます"
+      : "スタートを押して、心の中で" + (mode.target/1000) + "秒";
+    key.textContent = "スタート";
+    key.classList.remove("stop");
+    state = "ready";
+    paintLamps();
+    paintModes();
+  }
+
+  function resetSet(){
+    errors = [];
+    round = 0;
+    submitted = false;
+    clearBoard();
+    shareBtn.hidden = true;
+    shareBtn.textContent = "結果をコピーする";
+    rankForm.hidden = true;
+    setGuide();
+    toReady();
+  }
+
+  function invalidate(why){
+    clearTimers();
+    blankAll();
+    state = "void";
+    readout.className = "readout void";
+    readout.textContent = why;
+    key.textContent = "はじめから";
+    key.classList.remove("stop");
+    errors = [];
+    round = 0;
+    clearBoard();
+    paintLamps();
+    paintModes();
+  }
+
+  function tap(ts){
+    var now = (typeof ts === "number" && ts > 0) ? ts : performance.now();
+
+    if (state === "running"){
+      state = "revealing";
+      clearTimers();
+      key.textContent = "…";
+      key.classList.remove("stop");
+      paintModes();
+      reveal(now - startTs);
+      return;
+    }
+    if (state === "revealing") return;
+
+    if (state === "done" || state === "void"){ resetSet(); return; }
+    if (state === "shown"){ round++; toReady(); return; }
+
+    /* 1回ぶん始める */
+    clearTimers();
+    blankAll();
+    readout.className = "readout";
+    readout.textContent = mode.hintMs > 0 ? "ヒント表示中" : "計測中";
+    key.textContent = "ストップ";
+    key.classList.add("stop");
+    state = "running";
+    startTs = now;
+    paintLamps();
+    paintModes();
+    if (mode.hintMs > 0) rafId = requestAnimationFrame(hintLoop);
+  }
+
+  key.addEventListener("pointerdown", function(e){ e.preventDefault(); tap(e.timeStamp); });
+  key.addEventListener("keydown", function(e){
+    if (e.repeat) return;
+    if (e.key === " " || e.key === "Enter" || e.key === "Spacebar"){
+      e.preventDefault();
+      tap(e.timeStamp);
+    }
+  });
+  key.addEventListener("click", function(e){ e.preventDefault(); });
+
+  /* 計測中に画面を離れたら無効。長い100秒だけの話ではなく、
+     裏で別の時計を見られるのを塞ぐ意味もあるので全モードで効かせる */
+  document.addEventListener("visibilitychange", function(){
+    if (document.hidden && state === "running") invalidate("画面を離れたので、この回は無効");
+  });
+
+  muteBtn.addEventListener("click", function(){
+    muted = !muted;
+    muteBtn.textContent = muted ? "🔇" : "♪";
+  });
+
+  function selectMode(id){
+    if (state === "running" || state === "revealing") return;
+    if (id === mode.id) return;
+    mode = MODE_BY_ID[id];
+    try { localStorage.setItem("stopwatch10.mode", id); } catch(e){}
+    buildDisplay(mode.intCount);
+    buildRounds();
+    paintBoardLabels();
+    paintRecords();
+    paintModes();
+    resetSet();
+    refreshRank();
+  }
+
+  /* ---------------- ランキング ----------------
+     クライアント申告なので不正は防げない。デイリーを主、通算を従にして流す。 */
+  var rankBoard = "avg", rankSpan = "daily", rankData = null, youRanks = null;
+
+  function rankable(){ return !!API_BASE && mode.ranked; }
+
+  function api(path, opts){
+    var o = opts || {};
+    o.headers = { "content-type":"application/json" };
+    var ctrl = ("AbortController" in window) ? new AbortController() : null;
+    if (ctrl) o.signal = ctrl.signal;
+    var to = setTimeout(function(){ if (ctrl) ctrl.abort(); }, 7000);
+    return fetch(API_BASE + path, o).then(function(res){
+      clearTimeout(to);
+      return res.json().then(function(j){
+        if (!res.ok || !j || j.ok !== true) throw new Error((j && j.error) || ("http " + res.status));
+        return j;
+      });
+    }, function(e){ clearTimeout(to); throw e; });
+  }
+
+  function paintRankTabs(){
+    var bs = rankTabs.querySelectorAll("button");
+    for (var i=0;i<bs.length;i++){
+      var b = bs[i];
+      if (b.dataset.board) b.setAttribute("aria-pressed", b.dataset.board === rankBoard ? "true" : "false");
+      if (b.dataset.span)  b.setAttribute("aria-pressed", b.dataset.span  === rankSpan  ? "true" : "false");
+    }
+  }
+
+  function renderRank(){
+    rankList.innerHTML = "";
+    if (!rankData){ return; }
+    var span = rankData.boards[rankSpan] || {};
+    var rows = span[rankBoard] || [];
+    var mine = youRanks && youRanks[rankSpan] ? youRanks[rankSpan][rankBoard] : null;
+
+    if (!rows.length){
+      var li0 = document.createElement("li");
+      li0.textContent = rankSpan === "daily" ? "今日はまだ誰もいません" : "まだ誰もいません";
+      rankList.appendChild(li0);
+      return;
+    }
+    for (var i=0;i<rows.length;i++){
+      var e = rows[i];
+      var li = document.createElement("li");
+      if (mine === i+1) li.className = "me";
+
+      var no = document.createElement("span"); no.className = "no"; no.textContent = (i+1) + ".";
+      var nm = document.createElement("span"); nm.className = "nm"; nm.textContent = e.n;
+      var va = document.createElement("span"); va.className = "va";
+      va.textContent = fmtSec(rankBoard === "avg" ? e.a : e.b);
+      li.appendChild(no); li.appendChild(nm); li.appendChild(va);
+
+      if (rankBoard === "one" && e.r !== null && e.r !== undefined){
+        var sb = document.createElement("span"); sb.className = "sub";
+        sb.textContent = "残り " + fmtSec(e.r);
+        li.appendChild(sb);
+      }
+      rankList.appendChild(li);
+    }
+  }
+
+  function openRankForm(){
+    if (!rankable() || submitted) return;
+    rankForm.hidden = false;
+    rankSend.disabled = false;
+    if (!nameInput.value) nameInput.value = loadName();
+    rankNote.textContent = "名前を入れて送ると並びます。今日のぶんは日付が変わると流れます。";
+  }
+
+  function refreshRank(){
+    youRanks = null;
+    rankData = null;
+    rankList.innerHTML = "";
+    if (!rankable()){ rankBox.hidden = true; return; }
+    rankBox.hidden = false;
+    rankForm.hidden = !(state === "done" && !submitted);
+    rankNote.textContent = "読み込み中";
+    paintRankTabs();
+    api("/scores?mode=" + encodeURIComponent(mode.id) + "&limit=" + TOP_N).then(function(j){
+      rankData = j;
+      renderRank();
+      if (state === "done" && !submitted) openRankForm();
+      else rankNote.textContent = "";
+    }, function(){
+      rankNote.textContent = "ランキングに繋がりませんでした。遊ぶぶんには支障ありません。";
+    });
+  }
+
+  rankTabs.addEventListener("click", function(e){
+    var b = e.target.closest ? e.target.closest("button") : null;
+    if (!b) return;
+    if (b.dataset.board) rankBoard = b.dataset.board;
+    if (b.dataset.span)  rankSpan  = b.dataset.span;
+    paintRankTabs();
+    renderRank();
+  });
+
+  rankForm.addEventListener("submit", function(e){
+    e.preventDefault();
+    if (!rankable() || submitted || state !== "done") return;
+    var name = nameInput.value.replace(/\s+/g, " ").trim();
+    if (!name) name = "ななし";
+    if (name.length > 12) name = name.slice(0, 12);
+    saveName(name);
+    rankSend.disabled = true;
+    rankNote.textContent = "送っています";
+    api("/scores", {
+      method: "POST",
+      body: JSON.stringify({ v:1, mode:mode.id, name:name, errors:errors, limit:TOP_N })
+    }).then(function(j){
+      submitted = true;
+      rankData = j;
+      youRanks = j.you || null;
+      rankForm.hidden = true;
+      renderRank();
+      var mineNow = youRanks && youRanks[rankSpan] ? youRanks[rankSpan][rankBoard] : null;
+      rankNote.textContent = mineNow ? ("今日の" + (rankBoard === "avg" ? "1回あたり" : "ベスト1回") + "で " + mineNow + " 位")
+                                     : "のせました。";
+    }, function(){
+      rankSend.disabled = false;
+      rankNote.textContent = "送れませんでした。もう一度押してみてください。";
+    });
+  });
+
+  /* ---------------- 共有 ---------------- */
+  shareBtn.addEventListener("click", function(){
+    var s = summarize(), i;
+    var line = "10秒ピッタリで止めろ！（" + mode.name + "・" + mode.sub + "）\n";
+    if (mode.rounds > 1){
+      var marks = ["①","②","③","④","⑤"], parts = [];
+      for (i=0;i<errors.length;i++) parts.push(marks[i] + " " + fmtErr(errors[i]));
+      line += parts.join("  ") + "\n";
+      line += "1回あたり " + fmtSec(s.avg) + " ／ ベスト1回 " + fmtSec(s.best) + "\n";
+    } else {
+      line += "誤差 " + fmtErr(errors[0]) + "\n";
+    }
+    line += "https://koshinstudio.com/works/stopwatch10/";
+    var ok = function(){ shareBtn.textContent = "コピーした"; };
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(line).then(ok, function(){ shareBtn.textContent = "コピーできなかった"; });
+    } else {
+      var ta = document.createElement("textarea");
+      ta.value = line; document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); ok(); } catch(e){ shareBtn.textContent = "コピーできなかった"; }
+      document.body.removeChild(ta);
+    }
+  });
+
+  /* ---------------- 起動 ---------------- */
+  var saved = null;
+  try { saved = localStorage.getItem("stopwatch10.mode"); } catch(e){}
+  if (saved && MODE_BY_ID[saved]) mode = MODE_BY_ID[saved];
+
+  buildModes();
+  buildDisplay(mode.intCount);
+  buildRounds();
+  paintBoardLabels();
+  paintRecords();
+  paintModes();
+  resetSet();
+  nameInput.value = loadName();
+  refreshRank();
+})();
+</script>
+</body>
+</html>
