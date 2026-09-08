@@ -51,7 +51,7 @@ console.log("受け付けない投稿");
   ok("回数が合わない", (await post({ mode: "s10", name: "a", errors: [1, 2] })).status === 400);
   ok("整数でない", (await post({ mode: "s10", name: "a", errors: [1.5, 2, 3] })).status === 400);
   ok("目標より早すぎる", (await post({ mode: "s10", name: "a", errors: [-10001, 0, 0] })).status === 400);
-  ok("遅すぎる", (await post({ mode: "s10", name: "a", errors: [40001, 0, 0] })).status === 400);
+  ok("画面に出ない遅さ", (await post({ mode: "s10", name: "a", errors: [90000, 0, 0] })).status === 400);
   eq("書き込みは起きていない", writes, 0);
 }
 
@@ -88,6 +88,14 @@ console.log("同じ名前");
   const g2 = await (await post({ mode: "s10", name: "C", errors: [10, 10, 10] })).json();
   eq("良くなったら差し替わる", g2.boards.daily.avg.filter((x) => x.n === "C")[0].a, 10);
   eq("同じ名前は1行だけ", g2.boards.daily.avg.filter((x) => x.n === "C").length, 1);
+}
+
+console.log("ひどい記録");
+{
+  const r = await post({ mode: "s10", name: "へた", errors: [89999, 0, 0] });
+  ok("画面に出せる範囲なら受ける", r.status === 200);
+  const j = await r.json();
+  eq("盤の一番下に付く", j.boards.daily.avg.slice(-1).map((x) => x.n), ["へた"]);
 }
 
 console.log("名前の掃除");

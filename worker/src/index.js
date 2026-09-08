@@ -20,10 +20,12 @@
    同じ名前で前より悪い投稿は、そもそも書かない。
    ============================================================ */
 
+/* max は画面が出せる一番遅い誤差（表示は 99.999 / 999.999 で頭打ち）。
+   ひどい記録でも受けは付ける。どうせ盤には残らない */
 const MODES = {
-  s10:  { rounds: 3, target: 10000,  open: true  },  // 公開中はこれだけ。増やすと盤が薄まる
-  s10h: { rounds: 3, target: 10000,  open: false },
-  s100: { rounds: 1, target: 100000, open: false },
+  s10:  { rounds: 3, target: 10000,  max: 89999,  open: true  },  // 公開中はこれだけ。増やすと盤が薄まる
+  s10h: { rounds: 3, target: 10000,  max: 89999,  open: false },
+  s100: { rounds: 1, target: 100000, max: 899999, open: false },
 };
 
 const CAP = 100;                      // 盤に残す人数
@@ -49,8 +51,9 @@ const CMP = { avg: byAvg, one: byOne };
 
 const emptyBoards = () => ({ avg: [], one: [] });
 
-async function readBoards(env, key) {
-  const raw = await env.SCORES.get(key, { type: "json", cacheTtl: 30 });
+/* 見るときは少し寝かせた値でいい。書く前に読むときは寝かせない（消えるので） */
+async function readBoards(env, key, cacheTtl) {
+  const raw = await env.SCORES.get(key, cacheTtl ? { type: "json", cacheTtl } : { type: "json" });
   if (!raw || typeof raw !== "object") return emptyBoards();
   return {
     avg: Array.isArray(raw.avg) ? raw.avg : [],
@@ -130,8 +133,8 @@ export default {
       if (!MODES[mode]) return bad("unknown mode", env, req);
       const date = jstDate();
       const [daily, all] = await Promise.all([
-        readBoards(env, dailyKey(mode, date)),
-        readBoards(env, allKey(mode)),
+        readBoards(env, dailyKey(mode, date), 30),
+        readBoards(env, allKey(mode), 30),
       ]);
       return json(
         { ok: true, mode, date, open: MODES[mode].open,
@@ -160,7 +163,7 @@ export default {
     for (const raw of errors) {
       const e = Number(raw);
       if (!isFinite(e) || Math.floor(e) !== e) return bad("bad errors", env, req);
-      if (e < -spec.target || e > spec.target * 4) return bad("out of range", env, req);
+      if (e < -spec.target || e > spec.max) return bad("out of range", env, req);
       const abs = Math.abs(e);
       sum += abs;
       if (abs < best) best = abs;
