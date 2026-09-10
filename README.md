@@ -4,7 +4,9 @@
 本体は `index.html` 一枚。外部 library はゼロ。開けばもう始まっている。
 
     index.html        ゲーム本体（これだけで動く）
+    tools/dist.mjs    配る形（dist/）を組む
     worker/           ランキング（Cloudflare Workers + KV）
+    store/            表紙の元（サイトの表紙はここから作る）
     test/             確かめるための道具（遊ぶのには要らない）
 
 ## 崩してはいけない三つ
@@ -92,9 +94,23 @@ CSS アニメーションを足すときは、必ず計測中に止まること�
 
 `test/` は Playwright を使う。ゲーム本体には要らない。
 
-## サイトに載せる
+## 出す
 
-koshin-studio 側の `build.mjs` が、隣に並んだこのリポジトリの `index.html` を
-`works/stopwatch10/play/index.html` に写す。Cloudflare Pages のビルド機からは
-隣のリポジトリが見えないので、写したものは**サイト側にも commit しておく**。
-ゲームを直したら `node build.mjs` して commit し直す。
+このゲームは**自分の Pages に自分で出す**。koshinstudio.com はそれを中継して
+いるだけなので、中身を直したときサイト側は触らなくていい。
+
+    node tools/dist.mjs
+    npx wrangler pages deploy dist --project-name stopwatch10
+
+`dist/` は本体に二つだけ足したもの。検索の当たり先を紹介ページに寄せるための
+`noindex, follow` と、見出しの絵（無いと `/favicon.ico` を探しに行って 404）。
+ゲームポータルへ出すときは `dist` ではなく `index.html` を一枚そのまま渡す。
+
+遊ぶ人が見る住所は **`koshinstudio.com/play/stopwatch10/`**。
+koshin-studio の `worker/index.js` が `ROUTES.play` を見て
+`stopwatch10.pages.dev` に繋いでいる。同じ住所に載せているのは、
+サブドメインに分けると localStorage（自己ベスト）が別扱いになるため。
+
+紹介ページは `koshinstudio.com/works/stopwatch10/`。文章と表紙は
+koshin-studio 側にあり、表紙の元だけがこのリポジトリの `store/` にある
+（`tools/images.py` が `.webp` / `.jpg` に落とす）。

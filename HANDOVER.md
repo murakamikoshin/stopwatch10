@@ -15,10 +15,13 @@
 
 ## 残っていること
 
+- [ ] `node tools/dist.mjs` して `npx wrangler pages deploy dist --project-name stopwatch10`
+      （Cloudflare の操作が要るので、村上さんの手で）。出したら koshin-studio 側で
+      `worker/` を deploy し直すと `koshinstudio.com/play/stopwatch10/` が繋がる
 - [ ] KV を作って `worker/wrangler.toml` に id を貼り、deploy する
+      （これも Cloudflare の操作が要る）
 - [ ] 出た URL を `index.html` の `<meta name="stopwatch10-api">` に入れる。
       **ここが空のあいだ、ランキングの枠はそもそも画面に出ない**
-- [ ] 表紙の絵（`/assets/stopwatch10-square.svg` を仮で置いてある）
 - [ ] プレイ数が伸びたら、ヒントあり・100秒のランキングを開ける。
       開けるのは `worker/src/index.js` の `MODES[].open` と
       `index.html` の `MODES[].ranked` の両方
