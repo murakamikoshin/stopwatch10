@@ -13,22 +13,30 @@
 - [x] 旧版 `pittari10.best`（3回の誤差合計）を平均に読み替えて持ち越す
 - [x] 検算（`worker/test.mjs` 30件 / `test/browser.mjs` 34件 / `test/rank.mjs` 15件）
 
+## 公開したもの（2026-09-12）
+
+| | |
+|---|---|
+| ゲーム本体 | `https://stopwatch10.pages.dev`（Pages プロジェクト `stopwatch10`） |
+| 遊ぶ道 | `https://koshinstudio.com/play/stopwatch10/`（koshin-studio の worker が中継） |
+| 紹介ページ | `https://koshinstudio.com/works/stopwatch10/` |
+| ランキング | `https://stopwatch10-rank.murakamikoshin.workers.dev`（KV: SCORES） |
+
+直したときの出し方は README の「出す」。ゲームを直しただけなら、
+`node tools/dist.mjs` → `npx wrangler pages deploy dist --project-name stopwatch10 --branch main`
+だけでよく、サイト側は触らなくていい。
+
 ## 残っていること
 
-- [ ] `node tools/dist.mjs` して `npx wrangler pages deploy dist --project-name stopwatch10`
-      （Cloudflare の操作が要るので、村上さんの手で）。出したら koshin-studio 側で
-      `worker/` を deploy し直すと `koshinstudio.com/play/stopwatch10/` が繋がる
-- [ ] KV を作って `worker/wrangler.toml` に id を貼り、`npx wrangler deploy`
-      （これも Cloudflare の操作が要る）。meta は
-      `https://stopwatch10-rank.murakamikoshin.workers.dev` を指してあるので、
-      deploy すればゲーム側は触らなくても繋がる。
-      繋がるまでは、ランキングの枠そのものが画面に出ない
 - [ ] プレイ数が伸びたら、ヒントあり・100秒のランキングを開ける。
       開けるのは `worker/src/index.js` の `MODES[].open` と
       `index.html` の `MODES[].ranked` の両方
 - [ ] 100秒モードの真の一発勝負（リロードで無限に挑戦できるのは、
       サーバー側で回数を持たない限り塞げない）
 - [ ] 100秒の3秒ヒントが効かないと感じたら `HINT_100` を `10000` にする
+- [ ] 通算の盤に入った記録を消す道が無い。試しに送ったものもそのまま残るので、
+      本気でない記録は送らない。消す必要が出たら KV のキー
+      `b:s10:all` を消す（その日ぶんは `b:s10:d:<日付>`、3日で自然に消える）
 
 ## さわるときの注意
 
