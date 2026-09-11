@@ -5,7 +5,7 @@ import worker, { _internals } from "./src/index.js";
 const store = new Map();
 let writes = 0;
 const env = {
-  ALLOWED_ORIGINS: "",
+  ALLOW_ORIGINS: "",
   SCORES: {
     async get(key, opts) {
       const v = store.get(key);

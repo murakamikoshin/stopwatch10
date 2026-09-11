@@ -5,9 +5,10 @@
    クライアント申告なので不正は防げない。デイリーを主にして流す前提。
 
    置き方
-     ・KV を一つ作って SCORES として結びつける
-     ・wrangler deploy
-     ・出た URL を index.html の <meta name="stopwatch10-api"> に入れる
+     ・KV を一つ作って SCORES として結びつける（wrangler.toml に id を貼る）
+     ・npx wrangler deploy
+     ・出る URL は https://stopwatch10-rank.<アカウント>.workers.dev。
+       index.html の <meta name="stopwatch10-api"> がそこを指している
 
    API
      GET  /scores?mode=s10&limit=20
@@ -91,7 +92,7 @@ function cleanName(v) {
 }
 
 const cors = (env, req) => {
-  const list = (env.ALLOWED_ORIGINS || "").split(",").map((s) => s.trim()).filter(Boolean);
+  const list = (env.ALLOW_ORIGINS || "").split(",").map((s) => s.trim()).filter(Boolean);
   const origin = req.headers.get("origin") || "";
   const allow = list.length === 0 ? "*" : (list.indexOf(origin) !== -1 ? origin : list[0]);
   return {

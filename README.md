@@ -74,11 +74,20 @@ CSS アニメーションを足すときは、必ず計測中に止まること�
     npx wrangler kv namespace create SCORES   # 出た id を wrangler.toml に貼る
     npx wrangler deploy
 
-出た URL を `index.html` の
+置き場の名前は `stopwatch10-rank`。出る URL は
+`https://stopwatch10-rank.<アカウント>.workers.dev` で、`index.html` の
 
-    <meta name="stopwatch10-api" content="">
+    <meta name="stopwatch10-api" content="https://stopwatch10-rank.murakamikoshin.workers.dev">
 
-に入れる（空のままなら、ランキングの枠はまるごと出ない。ゲームは動く）。
+が最初からそこを指している。**deploy すれば、ゲーム側は触らなくても繋がる。**
+別のアカウントや別の名前で出すなら、この meta を書き換える。
+
+繋がるまでのあいだ（まだ deploy していない、落ちている、繋がらない）は、
+**ランキングの枠そのものが画面に出ない**。断りも出さない。遊ぶのに支障は無いので、
+空の枠や赤い字を見せるより黙っているほうがいい。
+
+受け付ける出どころは `wrangler.toml` の `ALLOW_ORIGINS`。
+いまは koshinstudio.com と stopwatch10.pages.dev の二つ。
 
 クライアント申告なので不正は防げない。**デイリーリセット前提**で流す。日付は
 日本時間で切る。KV の書き込みは無料枠で1日1000回なので、盤面はモードごとに

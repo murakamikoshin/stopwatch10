@@ -19,7 +19,11 @@ const browser = await chromium.launch({ executablePath: process.env.CHROMIUM || 
 const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
 const errs = [];
 page.on("pageerror", (e) => errs.push(String(e)));
-page.on("console", (m) => { if (m.type() === "error") errs.push(m.text()); });
+/* ランキングの置き場へ繋がらないのは、ここでは当たり前（外に出られない）。
+   繋がらなくてもゲームは動く、というのがまさに確かめたいことなので数えない */
+page.on("console", (m) => {
+  if (m.type() === "error" && !/net::ERR|Failed to load resource/.test(m.text())) errs.push(m.text());
+});
 await page.goto(url);
 
 const lit = () => page.$$eval("#disp g", (gs) => gs.map((g) => g.querySelectorAll(".seg.on").length));
@@ -38,7 +42,7 @@ console.log("最初の姿");
   eq("桁は 2 + 3", await page.$$eval("#disp g", (g) => g.length), 5);
   eq("回数の欄は3つ", (await rounds()).length, 3);
   eq("消灯している", (await lit()).reduce((a, b) => a + b, 0), 0);
-  ok("ランキングは出ていない（API 未設定）", await page.$eval("#rank", (el) => el.hidden));
+  ok("置き場に繋がらないうちはランキングを出さない", await page.$eval("#rank", (el) => el.hidden));
 }
 
 console.log("10秒ノーヒント");

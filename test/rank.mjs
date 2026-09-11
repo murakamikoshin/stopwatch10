@@ -9,11 +9,11 @@ import { chromium } from "playwright";
 import worker from "../worker/src/index.js";
 
 const html = readFileSync(new URL("../index.html", import.meta.url), "utf8")
-  .replace('<meta name="stopwatch10-api" content="">', '<meta name="stopwatch10-api" content="/api">');
+  .replace(/<meta name="stopwatch10-api" content="[^"]*">/, '<meta name="stopwatch10-api" content="/api">');
 
 const store = new Map();
 const env = {
-  ALLOWED_ORIGINS: "",
+  ALLOW_ORIGINS: "",
   SCORES: {
     async get(key, opts) {
       const v = store.get(key);

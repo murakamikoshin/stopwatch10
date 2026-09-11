@@ -8,8 +8,8 @@
 <meta property="og:title" content="10秒ピッタリで止めろ！">
 <meta property="og:description" content="3回勝負。1回あたりの誤差が小さいほど強い。">
 <meta property="og:type" content="website">
-<!-- ランキングの置き場。空 or 無しならランキングはまるごと出ない -->
-<meta name="stopwatch10-api" content="">
+<!-- ランキングの置き場。空 or 無し、もしくは繋がらないときは、ランキングはまるごと出ない -->
+<meta name="stopwatch10-api" content="https://stopwatch10-rank.murakamikoshin.workers.dev">
 <style>
   :root{
     --bench:#B4B7A4;
@@ -787,18 +787,20 @@
     youRanks = null;
     rankData = null;
     rankList.innerHTML = "";
-    if (!rankable()){ rankBox.hidden = true; return; }
-    rankBox.hidden = false;
+    rankBox.hidden = true;
+    if (!rankable()) return;
     rankForm.hidden = !(state === "done" && !submitted);
-    rankNote.textContent = "読み込み中";
     paintRankTabs();
     api("/scores?mode=" + encodeURIComponent(mode.id) + "&limit=" + TOP_N).then(function(j){
       rankData = j;
+      rankBox.hidden = false;       /* 繋がってから初めて出す。空の枠を先に見せない */
       renderRank();
       if (state === "done" && !submitted) openRankForm();
       else rankNote.textContent = "";
     }, function(){
-      rankNote.textContent = "ランキングに繋がりませんでした。遊ぶぶんには支障ありません。";
+      /* 置き場がまだ無い・繋がらない。遊ぶのに支障は無いので、
+         断りを出すより枠ごと引っ込めるほうが静かでいい */
+      rankBox.hidden = true;
     });
   }
 
