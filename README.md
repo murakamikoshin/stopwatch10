@@ -112,14 +112,22 @@ KV はもう作ってあり、`wrangler.toml` に id を書いてある。作り
 いるだけなので、中身を直したときサイト側は触らなくていい。
 
     node tools/dist.mjs
-    npx wrangler pages deploy dist --project-name stopwatch10 \
-        --branch claude/handover-continuation-sttqb4
+    npx wrangler pages deploy dist --project-name stopwatch10 --branch main
 
-**`--branch` の名前に注意。** この Pages は最初の deploy で本番ブランチが
-`claude/handover-continuation-sttqb4` になってしまっている（`--branch` を
-付けずに出したため）。`--branch main` で出すと preview に入るだけで、
-`stopwatch10.pages.dev` は変わらない。Settings → Builds & deployments の
-**Production branch** を `main` に直せば、以後は `--branch main` でよい。
+**`--branch` を落とさないこと。** 落とすと、そのとき居た git の branch 名が
+本番ブランチとして登録される。最初の一回でそれをやってしまい、本番ブランチが
+`claude/handover-continuation-sttqb4` になっていた（2026-09-12 に `main` へ直した）。
+本番ブランチと違う名前で出すと preview に入るだけで、`stopwatch10.pages.dev` は
+変わらない。しかもコマンドは成功したように見える。
+
+見分け方は最後の一行。`Deployment alias URL:` が出たら preview、出なければ本番。
+
+**設定と履歴は別物。** 混同しやすいので注意する。
+
+| 見るもの | 出るもの |
+|---|---|
+| `npx wrangler pages project list` | いまの**設定**（Production branch 列） |
+| `npx wrangler pages deployment list --project-name stopwatch10` | **履歴**。Production 行のブランチ名は、そのデプロイを出したときの名前。設定を変えても書き換わらない |
 
 `dist/` は本体に二つだけ足したもの。検索の当たり先を紹介ページに寄せるための
 `noindex, follow` と、見出しの絵（無いと `/favicon.ico` を探しに行って 404）。

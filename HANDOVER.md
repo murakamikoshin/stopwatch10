@@ -25,17 +25,15 @@
 直したときの出し方は README の「出す」。ゲームを直しただけなら、
 そこだけ出せばよく、サイト側は触らなくていい。
 
-**いまの Pages は本番ブランチが `claude/handover-continuation-sttqb4` になっている。**
-最初の deploy で `--branch` を付けなかったため、そのとき居た作業ブランチの名前が
-登録されてしまった。直すまでは、出すときにその名前を書かないと preview 行きになる。
-
     node tools/dist.mjs
-    npx wrangler pages deploy dist --project-name stopwatch10 \
-        --branch claude/handover-continuation-sttqb4
+    npx wrangler pages deploy dist --project-name stopwatch10 --branch main
 
-Cloudflare の Settings → Builds & deployments で **Production branch** を `main` に
-変えれば、以後は `--branch main` でよくなる。変えたらこの節も直すこと。
-どれが本番かは `npx wrangler pages deployment list --project-name stopwatch10` で見える。
+`--branch` は落とさない。落とすと、そのとき居た git の branch 名が本番ブランチとして
+登録される（最初の一回でそれをやってしまい、2026-09-12 に `main` へ直した）。
+`Deployment alias URL:` の行が出たら preview に入っただけ。
+
+いまの設定は `npx wrangler pages project list` の Production branch 列で見る。
+`deployment list` のほうは履歴なので、Production 行に古いブランチ名が残る。
 
 ## 残っていること
 
