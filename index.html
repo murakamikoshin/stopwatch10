@@ -601,7 +601,11 @@
       : "1回きり。次はページを開き直してから。";
     shareBtn.hidden = false;
     submitted = false;
-    openRankForm();
+    /* 開いた時に繋がらなかった（置き場がまだ無かった・一時的に落ちていた）なら、
+       ここでもう一度だけ試す。そうしないと、遊び終えた人が載せる道が
+       ページを開き直すまで戻ってこない */
+    if (rankable() && rankBox.hidden) refreshRank();
+    else openRankForm();
   }
 
   /* ---------------- 入力 ---------------- */

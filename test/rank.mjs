@@ -24,7 +24,15 @@ const env = {
   },
 };
 
+/* 「開いた時は繋がらなかったが、遊び終えるまでに立ち上がった」を作るための栓 */
+let closed = false;
+
 const server = http.createServer(async (req, res) => {
+  if (closed && req.url.indexOf("/api/") === 0) {
+    res.writeHead(503, { "content-type": "text/plain" });
+    res.end("closed");
+    return;
+  }
   if (req.url === "/" || req.url.startsWith("/index.html")) {
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
     res.end(html);
@@ -120,6 +128,22 @@ console.log("もう一人");
   eq("うまいほうが上", names, ["うまいひと", "こうしん"]);
   eq("順位の断り", await p2.$eval("#rankNote", (el) => el.textContent), "今日の1回あたりで 1 位");
   await p2.close();
+}
+
+console.log("開いた時に繋がらなくても、遊び終えたら出す");
+{
+  closed = true;                       // 置き場がまだ立っていない状態で開く
+  const p3 = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  p3.on("pageerror", (e) => errs.push(String(e)));
+  await p3.goto(origin);
+  await sleep(400);
+  ok("開いた直後は枠を出さない", await p3.$eval("#rank", (el) => el.hidden));
+  closed = false;                      // 遊んでいるあいだに立ち上がる
+  await playSet(p3, [200, 300, 400]);
+  await p3.waitForSelector("#rank:not([hidden])", { timeout: 9000 });
+  ok("終わったら枠が出る", true);
+  ok("送信欄も出る", !(await p3.$eval("#rankForm", (el) => el.hidden)));
+  await p3.close();
 }
 
 console.log("ヒントありのモードにはまだ盤を出さない");
