@@ -23,8 +23,19 @@
 | ランキング | `https://stopwatch10-rank.murakamikoshin.workers.dev`（KV: SCORES） |
 
 直したときの出し方は README の「出す」。ゲームを直しただけなら、
-`node tools/dist.mjs` → `npx wrangler pages deploy dist --project-name stopwatch10 --branch main`
-だけでよく、サイト側は触らなくていい。
+そこだけ出せばよく、サイト側は触らなくていい。
+
+**いまの Pages は本番ブランチが `claude/handover-continuation-sttqb4` になっている。**
+最初の deploy で `--branch` を付けなかったため、そのとき居た作業ブランチの名前が
+登録されてしまった。直すまでは、出すときにその名前を書かないと preview 行きになる。
+
+    node tools/dist.mjs
+    npx wrangler pages deploy dist --project-name stopwatch10 \
+        --branch claude/handover-continuation-sttqb4
+
+Cloudflare の Settings → Builds & deployments で **Production branch** を `main` に
+変えれば、以後は `--branch main` でよくなる。変えたらこの節も直すこと。
+どれが本番かは `npx wrangler pages deployment list --project-name stopwatch10` で見える。
 
 ## 残っていること
 
