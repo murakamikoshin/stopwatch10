@@ -15,9 +15,10 @@ compatibility_date = "2026-09-01"
 # （Cloudflare のダッシュボード右下、または npx wrangler whoami で分かる）。
 # account_id = ""
 
+# npx wrangler kv namespace create SCORES で作ったもの（2026-09-11）
 [[kv_namespaces]]
 binding = "SCORES"
-id = "PUT_YOUR_KV_NAMESPACE_ID_HERE"
+id = "97753a2e4aa6404780fb5f2c577fff50"
 
 # 誰でも書き込めるランキングなので、置き場所を絞る。
 # 空にすると全部のサイトから受ける。

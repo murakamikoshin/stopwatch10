@@ -70,9 +70,12 @@ CSS アニメーションを足すときは、必ず計測中に止まること�
 
 ## ランキングを動かす
 
-    cd worker
-    npx wrangler kv namespace create SCORES   # 出た id を wrangler.toml に貼る
+    cd stopwatch10/worker        # ← サイトの worker/ ではない。ゲームのほう
     npx wrangler deploy
+
+KV はもう作ってあり、`wrangler.toml` に id を書いてある。作り直すときは
+
+    npx wrangler kv namespace create SCORES   # 出た id を wrangler.toml に貼る
 
 置き場の名前は `stopwatch10-rank`。出る URL は
 `https://stopwatch10-rank.<アカウント>.workers.dev` で、`index.html` の
